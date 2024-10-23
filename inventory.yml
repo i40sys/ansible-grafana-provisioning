@@ -1,0 +1,11 @@
+all:
+  hosts:
+    k5.joor.net:
+      ansible_host: 10.2.0.134
+      #ansible_ssh_common_args: '-o StrictHostKeyChecking=no  -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ControlMaster=no -o ControlPath=/dev/null'
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no  -o UserKnownHostsFile=/dev/null'
+      ansible_python_interpreter: /usr/bin/python3
+      # ansible_user: 'oriol'
+      #ansible_ssh_pass: ''
+      ansible_port: 22
+      #ansible_connection: 'ssh'

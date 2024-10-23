@@ -1,0 +1,78 @@
+---
+- hosts: all
+  become: true
+  remote_user: root
+  gather_facts: false
+  vars:
+    grafana_url: "https://grafana.i40sys.com"
+    grafana_admin_username: "admin"
+    grafana_admin_password: "The2password."
+  collections:
+    - i40sys.iot_stack
+  tasks:
+    - name: Installation and basic configuration
+      ansible.builtin.import_role:
+        name: i40sys.iot_stack.grafana
+
+    - name: Create Loki Datasource
+      community.grafana.grafana_datasource:
+        grafana_url: "{{ grafana_url }}"
+        url_username: "{{ grafana_admin_username }}"
+        url_password: "{{ grafana_admin_password }}"
+        name: "Loki"
+        ds_type: "loki"
+        access: "proxy"
+        org_id: 1
+        ds_url: "http://loki"
+        uid: "loki01"
+        additional_json_data:
+          derivedFields:
+            - matcherRegex: '[tT]race_?[iI][dD]\"?[:=]\"?(\\w+)'
+              name: "traceID"
+              url: "${__value.raw}"
+              urlDisplayLabel: ""
+      tags:
+        - grafana
+
+    - name: Create Mimir Datasource
+      community.grafana.grafana_datasource:
+        grafana_url: "{{ grafana_url }}"
+        url_username: "{{ grafana_admin_username }}"
+        url_password: "{{ grafana_admin_password }}"
+        name: "Mimir"
+        ds_type: "prometheus"
+        access: "proxy"
+        org_id: 1
+        ds_url: "http://mimir/prometheus"
+        uid: "mimir01"
+        additional_json_data:
+          exemplarTraceIdDestinations: []
+          httpMethod: "POST"
+          prometheusType: "Mimir"
+          prometheusVersion: "2.9.1"
+      register: result
+      tags:
+        - grafana
+
+    - name: Copy dashboard to target host
+      ansible.builtin.copy:
+        src: files/monitoring.json
+        dest: /tmp/monitoring.json
+        mode: "0644"
+      tags:
+        - grafana
+
+    - name: Import Grafana dashboard from file
+      community.grafana.grafana_dashboard:
+        grafana_url: "{{ grafana_url }}"
+        url_username: "{{ grafana_admin_username }}"
+        url_password: "{{ grafana_admin_password }}"
+        state: present
+        commit_message: Provisioned by ansible
+        overwrite: true
+        path: /tmp/monitoring.json
+
+    - name: Cleaning up tmp file
+      ansible.builtin.file:
+        path: /tmp/monitoring.json
+        state: absent
